@@ -121,9 +121,9 @@ p = [float(i) for i in sys.argv[1 : nvar + 1]]
 # Parámetros D-H:
 #        1    2
 d = [5, 0, 0]
-th = [p[0], 0, p[2]]
+th = [p[0], 0, -p[2]]
 a = [0, p[1], 2]
-al = [0, 0, 0]
+al = [0, -90, 0]
 
 # Orígenes para cada articulación
 o00 = [0, 0, 0, 1]
