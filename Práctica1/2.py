@@ -135,6 +135,7 @@ o33 = [0, 0, 0, 1]
 T01 = matriz_T(d[0], th[0], a[0], al[0])
 T12 = matriz_T(d[1], th[1], a[1], al[1])
 T23 = matriz_T(d[2], th[2], a[2], al[2])
+
 T02 = np.dot(T01, T12)
 T03 = np.dot(T02, T23)
 
