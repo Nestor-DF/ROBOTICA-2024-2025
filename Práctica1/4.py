@@ -120,10 +120,10 @@ p = [float(i) for i in sys.argv[1 : nvar + 1]]
 
 # Parámetros D-H:
 #        1    2
-d =     [p[0],  0,      0,     0,       5,      0,      0,      1,  1,    p[5],   p[5],    1+p[5]]
-th =    [0,     0,      p[1],  90+p[2], p[3],   0,      0,      0,  0,    0,      0,       0] 
-a =     [0,     2,      2,     0,       0,      p[4],   -p[4],  0,  0,    0,      0,       0]
-al =    [0,     0,      90,    90,      0,      0,      0,      0,  0,    0,      0,       0]
+d = [p[0], 0, 0, 0, 5, 0, 0, 1, 1, p[5], p[5], 1 + p[5]]
+th = [0, 0, p[1], 90 + p[2], p[3], 0, 0, 0, 0, 0, 0, 0]
+a = [0, 2, 2, 0, 0, p[4], -p[4], 0, 0, 0, 0, 0]
+al = [0, 0, 90, 90, 0, 0, 0, 0, 0, 0, 0, 0]
 
 # Orígenes para cada articulación
 o00 = [0, 0, 0, 1]
@@ -182,6 +182,10 @@ oEF0 = np.dot(T0_EF, oEF).tolist()
 
 
 # Mostrar resultado de la cinemática directa
-muestra_origenes([o00, o10p, o10, o20, o30, o40, [[o510p, o510, o610], [o520p, o520, o620]]], oEF0)
-muestra_robot([o00, o10p, o10, o20, o30, o40, [[o510p, o510, o610], [o520p, o520, o620]]], oEF0)
+muestra_origenes(
+    [o00, o10p, o10, o20, o30, o40, [[o510p, o510, o610], [o520p, o520, o620]]], oEF0
+)
+muestra_robot(
+    [o00, o10p, o10, o20, o30, o40, [[o510p, o510, o610], [o520p, o520, o620]]], oEF0
+)
 input()

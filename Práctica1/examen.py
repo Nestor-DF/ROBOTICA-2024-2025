@@ -119,17 +119,15 @@ if len(sys.argv) != nvar + 1:
 p = [float(i) for i in sys.argv[1 : nvar + 1]]
 
 # Parámetros D-H:
-#        1    2
-d = [p[0], 0, 0, 0, 0, 0, 0, 0]
-th = [0, p[1], 0, 90, 90 + p[3], 90 - p[4], 90 + p[4], 90]
-a = [0, 5, p[2], 0, 0, 2, 2, 2]
-al = [0, 0, 0, 90, 90, 180, 180, 180]
+d = [p[0], p[1], 2, -1, 0, 0, 0]
+th = [90, 0, p[2], 90 + p[3], -90 + p[4], -90 - p[4], -90]
+a = [0, 0, 0, 0, 1, 1, 1]
+al = [90, 0, -90, 90, 0, 0, 0]
 
 # Orígenes para cada articulación
 o00 = [0, 0, 0, 1]
 o11 = [0, 0, 0, 1]
 o22 = [0, 0, 0, 1]
-o33p = [0, 0, 0, 1]
 o33 = [0, 0, 0, 1]
 o44 = [0, 0, 0, 1]
 o551 = [0, 0, 0, 1]
@@ -137,35 +135,33 @@ o552 = [0, 0, 0, 1]
 oEF = [0, 0, 0, 1]
 
 # Cálculo matrices transformación
-T01 = matriz_T(d[0], th[0], a[0], al[0])
-T12 = matriz_T(d[1], th[1], a[1], al[1])
-T23p = matriz_T(d[2], th[2], a[2], al[2])
-T3p3 = matriz_T(d[3], th[3], a[3], al[3])
-T34 = matriz_T(d[4], th[4], a[4], al[4])
-T45_1 = matriz_T(d[5], th[5], a[5], al[5])
-T45_2 = matriz_T(d[6], th[6], a[6], al[6])
-T45_2 = matriz_T(d[6], th[6], a[6], al[6])
-T4EF = matriz_T(d[7], th[7], a[7], al[7])
+T0_1 = matriz_T(d[0], th[0], a[0], al[0])
+T1_2 = matriz_T(d[1], th[1], a[1], al[1])
+T2_3 = matriz_T(d[2], th[2], a[2], al[2])
+T3_4 = matriz_T(d[3], th[3], a[3], al[3])
+T4_51 = matriz_T(d[4], th[4], a[4], al[4])
+T4_52 = matriz_T(d[5], th[5], a[5], al[5])
+T4_EF = matriz_T(d[6], th[6], a[6], al[6])
 
-T02 = np.dot(T01, T12)
-T03 = np.dot(T02, T23p)
-T03p = np.dot(T03, T3p3)
-T04 = np.dot(T03p, T34)
-T05_1 = np.dot(T04, T45_1)
-T05_2 = np.dot(T04, T45_2)
-T0EF = np.dot(T04, T4EF)
+T0_2 = np.dot(T0_1, T1_2)
+T0_3 = np.dot(T0_2, T2_3)
+T0_4 = np.dot(T0_3, T3_4)
+T0_51 = np.dot(T0_4, T4_51)
+T0_52 = np.dot(T0_4, T4_52)
+T0_EF = np.dot(T0_4, T4_EF)
+
 
 # Transformación de cada articulación
-o10 = np.dot(T01, o11).tolist()
-o20 = np.dot(T02, o22).tolist()
-o30 = np.dot(T03, o33).tolist()
-o30p = np.dot(T03p, o33p).tolist()
-o40 = np.dot(T04, o44).tolist()
-o510 = np.dot(T05_1, o551).tolist()
-o520 = np.dot(T05_2, o552).tolist()
-oEF0 = np.dot(T0EF, oEF).tolist()
+o110 = np.dot(T0_1, o00).tolist()
+o220 = np.dot(T0_2, o00).tolist()
+o330 = np.dot(T0_3, o00).tolist()
+o440 = np.dot(T0_4, o00).tolist()
+o5510 = np.dot(T0_51, o00).tolist()
+o5520 = np.dot(T0_52, o00).tolist()
+oEF0 = np.dot(T0_EF, o00).tolist()
+
 
 # Mostrar resultado de la cinemática directa
-muestra_origenes([o00, o10, o20, o30, o40, [[o510], [o520]]], oEF0)
-muestra_robot([o00, o10, o20, o30, o40, [[o510], [o520]]], oEF0)
+muestra_origenes([o00, o110, o220, o330, o440, [[o5510], [o5520]]], oEF0)
+muestra_robot([o00, o110, o220, o330, o440, [[o5510], [o5520]]], oEF0)
 input()
