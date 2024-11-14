@@ -17,7 +17,6 @@ import colorsys as cs
 
 
 def muestra_origenes(O, final=0):
-    # Muestra los orígenes de coordenadas para cada articulación
     print("Origenes de coordenadas:")
     for i in range(len(O)):
         print("(O" + str(i) + ")0\t= " + str([round(j, 3) for j in O[i]]))
@@ -26,7 +25,6 @@ def muestra_origenes(O, final=0):
 
 
 def muestra_robot(O, obj):
-    # Muestra el robot graficamente
     plt.figure()
     plt.xlim(-L, L)
     plt.ylim(-L, L)
@@ -36,7 +34,7 @@ def muestra_robot(O, obj):
     plt.plot(obj[0], obj[1], "*")
     plt.pause(0.0001)
     plt.show()
-    #  input()
+    input()
     plt.close()
 
 
@@ -70,14 +68,14 @@ a = [5.0, 5.0, 5.0]
 L = sum(a)  # variable para representación gráfica
 EPSILON = 0.01
 
-# plt.ion() # modo interactivo
+plt.ion()  # modo interactivo
 
 # introducción del punto para la cinemática inversa
 if len(sys.argv) != 3:
     sys.exit("python " + sys.argv[0] + " x y")
 objetivo = [float(i) for i in sys.argv[1:]]
 O = cin_dir(th, a)
-# O=zeros(len(th)+1) # Reservamos estructura en memoria
+# O = zeros(len(th) + 1)  # Reservamos estructura en memoria
 # Calculamos la posicion inicial
 print("- Posicion inicial:")
 muestra_origenes(O)
@@ -85,15 +83,34 @@ muestra_origenes(O)
 dist = float("inf")
 prev = 0.0
 iteracion = 1
+
+# Mientras no llegues al punto destino o no puedas acercarte más
 while dist > EPSILON and abs(prev - dist) > EPSILON / 100.0:
     prev = dist
     O = [cin_dir(th, a)]
     # Para cada combinación de articulaciones:
     for i in range(len(th)):
-        # cálculo de la cinemática inversa:
-
+        # Parte del código a resolver: cálculo de la cinemática inversa
+        E = np.array(O[-1][-1 - i])
+        R = np.array(O[-1][-1 - i - 1])
+        # Definir dos vectores
+        v1 = E - R
+        v2 = objetivo - R
+        # Paso 1: Normalizar los vectores
+        if np.linalg.norm(v1) != 0:
+            v1 = v1 / np.linalg.norm(v1)
+        else:
+            v1 = np.zeros_like(v1)
+        if np.linalg.norm(v2) != 0:
+            v2 = v2 / np.linalg.norm(v2)
+        else:
+            v2 = np.zeros_like(v2)
+        # Calculo del ángulo usando atan2 para evitar ambigüedades en la dirección
+        cos_alpha = np.dot(v1, v2)
+        sin_alpha = np.cross(v1, v2)  # Producto cruzado para el determinante
+        alpha = atan2(sin_alpha, cos_alpha)
+        th[-1 - i] = th[-1 - i] + alpha
         O.append(cin_dir(th, a))
-
     dist = np.linalg.norm(np.subtract(objetivo, O[-1][-1]))
     print("\n- Iteracion " + str(iteracion) + ":")
     muestra_origenes(O[-1])
