@@ -90,13 +90,12 @@ while dist > EPSILON and abs(prev - dist) > EPSILON / 100.0:
     O = [cin_dir(th, a)]
     # Para cada combinación de articulaciones:
     for i in range(len(th)):
-        # Parte del código a resolver: cálculo de la cinemática inversa
-        E = np.array(O[-1][-1 - i])
+        E = np.array(O[-1][-1])
         R = np.array(O[-1][-1 - i - 1])
         # Definir dos vectores
         v1 = E - R
         v2 = objetivo - R
-        # Paso 1: Normalizar los vectores
+        # Normalizar los vectores
         if np.linalg.norm(v1) != 0:
             v1 = v1 / np.linalg.norm(v1)
         else:
@@ -105,20 +104,17 @@ while dist > EPSILON and abs(prev - dist) > EPSILON / 100.0:
             v2 = v2 / np.linalg.norm(v2)
         else:
             v2 = np.zeros_like(v2)
-        # Paso 2: Calcular el ángulo utilizando el coseno
-        cos_alpha = np.dot(v1, v2)  # Producto punto
-        cos_alpha = np.clip(
-            cos_alpha, -1.0, 1.0
-        )  # Limitar para evitar problemas numéricos
-        alpha_magnitude = acos(cos_alpha)
-        # Paso 3: Determinar la dirección del ángulo usando el producto cruzado
+        cos_alpha = np.dot(v1, v2)  # Producto punto (escalar)
+
+        # Limitar para evitar problemas numéricos
+        cos_alpha = np.clip(cos_alpha, -1.0, 1.0)
+        alpha = acos(cos_alpha)
+        # Determinar la dirección del ángulo usando el producto cruzado
         # En 2D, el producto cruzado es un escalar y puede dar positivo o negativo
-        cross_product = v1[0] * v2[1] - v1[1] * v2[0]  # Producto cruzado escalar en 2D
+        cross_product = np.cross(v1, v2)  # Producto cruzado
         # Si el producto cruzado es positivo, el ángulo es positivo; si es negativo, el ángulo es negativo
         if cross_product < 0:
-            alpha = -alpha_magnitude
-        else:
-            alpha = alpha_magnitude
+            alpha = -alpha
         th[-1 - i] = th[-1 - i] + alpha
         O.append(cin_dir(th, a))
     dist = np.linalg.norm(np.subtract(objetivo, O[-1][-1]))

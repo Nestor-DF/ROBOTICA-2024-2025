@@ -90,13 +90,12 @@ while dist > EPSILON and abs(prev - dist) > EPSILON / 100.0:
     O = [cin_dir(th, a)]
     # Para cada combinación de articulaciones:
     for i in range(len(th)):
-        # Parte del código a resolver: cálculo de la cinemática inversa
-        E = np.array(O[-1][-1 - i])
+        E = np.array(O[-1][-1])
         R = np.array(O[-1][-1 - i - 1])
         # Definir dos vectores
         v1 = E - R
         v2 = objetivo - R
-        # Paso 1: Normalizar los vectores
+        # Normalizar los vectores
         if np.linalg.norm(v1) != 0:
             v1 = v1 / np.linalg.norm(v1)
         else:
@@ -105,8 +104,8 @@ while dist > EPSILON and abs(prev - dist) > EPSILON / 100.0:
             v2 = v2 / np.linalg.norm(v2)
         else:
             v2 = np.zeros_like(v2)
-        # Calculo del ángulo usando atan2 para evitar ambigüedades en la dirección
-        cos_alpha = np.dot(v1, v2)
+        cos_alpha = np.dot(v1, v2)  # Producto punto (escalar)
+
         sin_alpha = np.cross(v1, v2)  # Producto cruzado para el determinante
         alpha = atan2(sin_alpha, cos_alpha)
         th[-1 - i] = th[-1 - i] + alpha
