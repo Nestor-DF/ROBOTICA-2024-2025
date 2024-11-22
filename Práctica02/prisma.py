@@ -115,7 +115,30 @@ except json.JSONDecodeError as e:
 th = config.get("th", [])
 a = config.get("a", [])
 prisma = config.get("prisma", [])
-prisma_ranges = config.get("prisma_ranges", [])
+ranges = config.get("ranges", [])
+
+# Verificar y lanzar errores si algún valor está fuera de rango
+for i in range(len(prisma)):
+    min_range, max_range = ranges[i]
+    if prisma[i] == 1:  # Articulación prismática (longitudes)
+        if not (min_range <= a[i] <= max_range):
+            raise ValueError(
+                f"El valor de a[{i}] = {a[i]} está fuera del rango permitido [{min_range}, {max_range}]."
+            )
+        if not (th[i] == 0):
+            raise ValueError(
+                f"El valor de th[{i}] = {th[i]} debe ser 0 para una articulación prismática."
+            )
+    else:  # Articulación de revolución (ángulos en grados)
+        if not (min_range <= th[i] <= max_range):
+            raise ValueError(
+                f"El valor de th[{i}] = {th[i]} está fuera del rango permitido [{np.degrees(min_range)}, {np.degrees(max_range)}]."
+            )
+        # Convertir los valores de th (en grados) a radianes si es una articulación de revolución
+        th[i] = np.radians(th[i])
+        # Actualizar el rango convertido a radianes en ranges
+        ranges[i] = [np.radians(min_range), np.radians(max_range)]
+
 
 # Extraer el punto objetivo de la cinemática inversa y modo interactivo
 objetivo = [args.x, args.y]
@@ -126,7 +149,7 @@ print("Valores cargados desde el archivo de configuración:")
 print(f"th = {th}")
 print(f"a = {a}")
 print(f"prisma = {prisma}")
-print(f"prisma_ranges = {prisma_ranges}")
+print(f"ranges = {ranges}")
 print("\nPunto objetivo para la cinemática inversa:")
 print(f"objetivo = {objetivo}")
 
@@ -153,10 +176,10 @@ while dist > EPSILON and abs(prev - dist) > EPSILON / 100.0:
             w = 0
             w = sum(th[: i + 1])
             d = np.dot(np.array([cos(w), sin(w)]), objetivo - E)
-            print("d" + str(i + 1) + " = " + str(round(d, 3)))
-            rango_min, rango_max = prisma_ranges[-1 - i]
-            new_a = max(rango_min, min(rango_max, a[-1 - i] + d))
-            print("L" + str(i + 1) + " = " + str(round(new_a, 3)))
+            # print("d" + str(i + 1) + " = " + str(round(d, 3)))
+            rango_min, rango_max = ranges[-1 - i]
+            # new_a = max(rango_min, min(rango_max, a[-1 - i] + d))
+            # print("L" + str(i + 1) + " = " + str(round(new_a, 3)))
             a[-1 - i] = max(rango_min, min(rango_max, a[-1 - i] + d))
         else:
             # Definir dos vectores
@@ -174,7 +197,10 @@ while dist > EPSILON and abs(prev - dist) > EPSILON / 100.0:
             cos_alpha = np.dot(v1, v2)  # Producto punto (escalar)
             sin_alpha = np.cross(v1, v2)  # Producto cruzado para el determinante
             alpha = atan2(sin_alpha, cos_alpha)
-            th[-1 - i] = th[-1 - i] + alpha
+            # print("alpha" + str(i + 1) + " = " + str(round(alpha, 3)))
+            rango_min, rango_max = ranges[-1 - i]
+            th[-1 - i] = max(rango_min, min(rango_max, th[-1 - i] + alpha))
+            # print("theta" + str(i + 1) + " = " + str(round(th[-1 - i], 3)))
         O.append(cin_dir(th, a))
     dist = np.linalg.norm(np.subtract(objetivo, O[-1][-1]))
     print("\n- Iteracion " + str(iteracion) + ":")
