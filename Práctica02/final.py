@@ -121,6 +121,10 @@ ranges = config.get("ranges", [])
 for i in range(len(prisma)):
     min_range, max_range = ranges[i]
     if prisma[i] == 1:  # Articulación prismática (longitudes)
+        if not (0 <= min_range <= max_range):
+            raise ValueError(
+                f"El rango de a[{i}] = [{min_range}, {max_range}] no está dentro del rango permitido [0, ∞)."
+            )
         if not (min_range <= a[i] <= max_range):
             raise ValueError(
                 f"El valor de a[{i}] = {a[i]} está fuera del rango permitido [{min_range}, {max_range}]."
@@ -130,6 +134,10 @@ for i in range(len(prisma)):
                 f"El valor de th[{i}] = {th[i]} debe ser 0 para una articulación prismática."
             )
     else:  # Articulación de revolución (ángulos en grados)
+        if not (-180 <= min_range <= max_range <= 180):
+            raise ValueError(
+                f"El rango de th[{i}] = [{min_range}, {max_range}] no está dentro del rango permitido [-180, 180]."
+            )
         if not (min_range <= th[i] <= max_range):
             raise ValueError(
                 f"El valor de th[{i}] = {th[i]} está fuera del rango permitido [{np.degrees(min_range)}, {np.degrees(max_range)}]."
@@ -172,19 +180,17 @@ while dist > EPSILON and abs(prev - dist) > EPSILON / 100.0:
     for i in range(len(th)):
         E = np.array(O[-1][-1])  # Punto final del robot
         R = np.array(O[-1][-1 - i - 1])
+        rango_min, rango_max = ranges[-1 - i]
         if prisma[-1 - i] == 1:
             w = 0
             w = sum(th[: i + 1])
             d = np.dot(np.array([cos(w), sin(w)]), objetivo - E)
-            # print("d" + str(i + 1) + " = " + str(round(d, 3)))
-            rango_min, rango_max = ranges[-1 - i]
-            # new_a = max(rango_min, min(rango_max, a[-1 - i] + d))
-            # print("L" + str(i + 1) + " = " + str(round(new_a, 3)))
             a[-1 - i] = max(rango_min, min(rango_max, a[-1 - i] + d))
         else:
             # Definir dos vectores
             v1 = E - R
             v2 = objetivo - R
+
             # Normalizar los vectores
             if np.linalg.norm(v1) != 0:
                 v1 = v1 / np.linalg.norm(v1)
@@ -194,13 +200,17 @@ while dist > EPSILON and abs(prev - dist) > EPSILON / 100.0:
                 v2 = v2 / np.linalg.norm(v2)
             else:
                 v2 = np.zeros_like(v2)
+
             cos_alpha = np.dot(v1, v2)  # Producto punto (escalar)
             sin_alpha = np.cross(v1, v2)  # Producto cruzado para el determinante
             alpha = atan2(sin_alpha, cos_alpha)
-            # print("alpha" + str(i + 1) + " = " + str(round(alpha, 3)))
-            rango_min, rango_max = ranges[-1 - i]
-            th[-1 - i] = max(rango_min, min(rango_max, th[-1 - i] + alpha))
-            # print("theta" + str(i + 1) + " = " + str(round(th[-1 - i], 3)))
+
+            # Normalizar el ángulo a [-pi, pi]
+            th[-1 - i] = (th[-1 - i] + alpha + np.pi) % (2 * np.pi) - np.pi
+
+            # Ajustar el ángulo al rango permitido
+            th[-1 - i] = max(rango_min, min(rango_max, th[-1 - i]))
+
         O.append(cin_dir(th, a))
     dist = np.linalg.norm(np.subtract(objetivo, O[-1][-1]))
     print("\n- Iteracion " + str(iteracion) + ":")
