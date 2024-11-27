@@ -24,21 +24,22 @@ def muestra_origenes(O, final=0):
         print("E.Final = " + str([round(j, 3) for j in final]))
 
 
-def muestra_robot(O, obj, pause_time=1, interactive=False):
-    matplotlib.use("TkAgg")  # Para poder configurar la posición de la ventana
+figure = plt.figure(figsize=(9, 9))  # Tamaño de la ventana gráfica
+plt.ion()  # modo interactivo
+
+
+def muestra_robot(O, obj, pause_time=1.5, interactive=False):
+    # matplotlib.use("TkAgg")  # Para poder configurar la posición de la ventana
+    # manager = plt.get_current_fig_manager()
+    # manager.window.wm_geometry("-0+0")  # Arriba derecha
 
     L = sum(a)  # Variable para representación gráfica
     H = 1.5  # Variable para representación gráfica
-    plt.figure(figsize=(9, 9))  # Tamaño de la ventana gráfica
     plt.xlim(-H * L, H * L)
     plt.ylim(-H * L, H * L)
     plt.xlabel("X")
     plt.ylabel("Y")
     plt.title("Visualización del robot")
-
-    # Configurar posición inicial de la ventana
-    manager = plt.get_current_fig_manager()
-    manager.window.wm_geometry("+0+0")
 
     # Generar colores distintivos
     num_links = len(O)
@@ -56,14 +57,12 @@ def muestra_robot(O, obj, pause_time=1, interactive=False):
     plt.legend(loc="upper right")
 
     # Mostrar gráfico
-    plt.pause(pause_time)
     if interactive:
         plt.show()
         input("Presiona Enter para continuar...")
     else:
-        plt.draw()
-
-    plt.close()
+        plt.pause(pause_time)
+    plt.clf()
 
 
 def matriz_T(d, th, a, al):
@@ -95,6 +94,7 @@ parser.add_argument(
 )
 parser.add_argument("x", type=float, help="Coordenada x del punto objetivo")
 parser.add_argument("y", type=float, help="Coordenada y del punto objetivo")
+parser.add_argument("EPSILON", type=float, help="Umbral de convergencia")
 parser.add_argument("--interactive", action="store_true", help="Modo interactivo")
 
 # Parsear argumentos
@@ -146,8 +146,9 @@ for i in range(len(prismatica)):
         limites[i] = [np.radians(min_range), np.radians(max_range)]
 
 
-# Extraer el punto objetivo de la cinemática inversa y modo interactivo
+# Extraer el punto objetivo de la cinemática inversa, epsilon y modo interactivo de los argumentos
 objetivo = [args.x, args.y]
+EPSILON = args.EPSILON
 interactive = args.interactive
 
 # Mostrar los valores cargados
@@ -159,8 +160,6 @@ print(f"limites = {limites}")
 print("\nPunto objetivo para la cinemática inversa:")
 print(f"objetivo = {objetivo}")
 
-EPSILON = 0.01
-plt.ion()  # modo interactivo
 O = cin_dir(th, a)
 # O = zeros(len(th) + 1)  # Reservamos estructura en memoria
 print("\n- Posicion inicial:")
