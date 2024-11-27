@@ -118,6 +118,10 @@ limites = config.get("limites", [])
 # Verificar y lanzar errores si algún valor está fuera de rango
 for i in range(len(prismatica)):
     min_range, max_range = limites[i]
+    if not (-180 <= th[i] <= 180):
+        raise ValueError(
+            f"El valor de th[{i}] = {th[i]} está fuera del rango permitido [-180, 180]."
+        )
     if prismatica[i] == 1:  # Articulación prismática (longitudes)
         if not (0 <= min_range <= max_range):
             raise ValueError(
@@ -126,10 +130,6 @@ for i in range(len(prismatica)):
         if not (min_range <= a[i] <= max_range):
             raise ValueError(
                 f"El valor de a[{i}] = {a[i]} está fuera del rango permitido [{min_range}, {max_range}]."
-            )
-        if not (th[i] == 0):
-            raise ValueError(
-                f"El valor de th[{i}] = {th[i]} debe ser 0 para una articulación prismática."
             )
     else:  # Articulación de revolución (ángulos en grados)
         if not (-180 <= min_range <= max_range <= 180):
@@ -140,10 +140,10 @@ for i in range(len(prismatica)):
             raise ValueError(
                 f"El valor de th[{i}] = {th[i]} está fuera del rango permitido [{np.degrees(min_range)}, {np.degrees(max_range)}]."
             )
-        # Convertir los valores de th (en grados) a radianes si es una articulación de revolución
-        th[i] = np.radians(th[i])
         # Actualizar el rango convertido a radianes en limites
         limites[i] = [np.radians(min_range), np.radians(max_range)]
+    # Convertir los valores de th (en grados) a radianes
+    th[i] = np.radians(th[i])
 
 
 # Extraer el punto objetivo de la cinemática inversa, epsilon y modo interactivo de los argumentos
@@ -173,6 +173,8 @@ iteracion = 1
 while dist > EPSILON and abs(prev - dist) > EPSILON / 100.0:
     prev = dist
     O = [cin_dir(th, a)]
+    if iteracion == 1:
+        muestra_robot(O, objetivo, interactive=interactive)
     # Para cada combinación de articulaciones:
     for i in range(len(th)):
         E = np.array(O[-1][-1])  # Punto final del robot
@@ -210,10 +212,14 @@ while dist > EPSILON and abs(prev - dist) > EPSILON / 100.0:
 
         O.append(cin_dir(th, a))
     dist = np.linalg.norm(np.subtract(objetivo, O[-1][-1]))
+    # MEJORA: Si no hay convergencia tras 5 iteraciones y la distancia al objetivo es mayor a 0.5 no habrá convergencia
+    if iteracion >= 5 and dist > 0.5:
+        print("\nSe estima que no habrá convergencia")
+        break
     print("\n- Iteracion " + str(iteracion) + ":")
     muestra_origenes(O[-1])
-    muestra_robot(O, objetivo, interactive=interactive)
     print("Distancia al objetivo = " + str(round(dist, 5)))
+    muestra_robot(O, objetivo, interactive=interactive)
     iteracion += 1
     O[0] = O[-1]
 
