@@ -76,8 +76,6 @@ def matriz_T(d, th, a, al):
 
 
 def cin_dir(th, a):
-    # Sea 'th' el vector de thetas
-    # Sea 'a'  el vector de longitudes
     T = np.identity(4)
     o = [[0, 0]]
     for i in range(len(th)):
@@ -114,13 +112,13 @@ except json.JSONDecodeError as e:
 # Extraer variables de configuración
 th = config.get("th", [])
 a = config.get("a", [])
-prisma = config.get("prisma", [])
-ranges = config.get("ranges", [])
+prismatica = config.get("prismatica", [])
+limites = config.get("limites", [])
 
 # Verificar y lanzar errores si algún valor está fuera de rango
-for i in range(len(prisma)):
-    min_range, max_range = ranges[i]
-    if prisma[i] == 1:  # Articulación prismática (longitudes)
+for i in range(len(prismatica)):
+    min_range, max_range = limites[i]
+    if prismatica[i] == 1:  # Articulación prismática (longitudes)
         if not (0 <= min_range <= max_range):
             raise ValueError(
                 f"El rango de a[{i}] = [{min_range}, {max_range}] no está dentro del rango permitido [0, ∞)."
@@ -144,8 +142,8 @@ for i in range(len(prisma)):
             )
         # Convertir los valores de th (en grados) a radianes si es una articulación de revolución
         th[i] = np.radians(th[i])
-        # Actualizar el rango convertido a radianes en ranges
-        ranges[i] = [np.radians(min_range), np.radians(max_range)]
+        # Actualizar el rango convertido a radianes en limites
+        limites[i] = [np.radians(min_range), np.radians(max_range)]
 
 
 # Extraer el punto objetivo de la cinemática inversa y modo interactivo
@@ -156,8 +154,8 @@ interactive = args.interactive
 print("Valores cargados desde el archivo de configuración:")
 print(f"th = {th}")
 print(f"a = {a}")
-print(f"prisma = {prisma}")
-print(f"ranges = {ranges}")
+print(f"prismatica = {prismatica}")
+print(f"limites = {limites}")
 print("\nPunto objetivo para la cinemática inversa:")
 print(f"objetivo = {objetivo}")
 
@@ -180,12 +178,12 @@ while dist > EPSILON and abs(prev - dist) > EPSILON / 100.0:
     for i in range(len(th)):
         E = np.array(O[-1][-1])  # Punto final del robot
         R = np.array(O[-1][-1 - i - 1])
-        rango_min, rango_max = ranges[-1 - i]
-        if prisma[-1 - i] == 1:
+        limite_inf, limite_sup = limites[-1 - i]
+        if prismatica[-1 - i] == 1:
             w = 0
             w = sum(th[: i + 1])
             d = np.dot(np.array([cos(w), sin(w)]), objetivo - E)
-            a[-1 - i] = max(rango_min, min(rango_max, a[-1 - i] + d))
+            a[-1 - i] = max(limite_inf, min(limite_sup, a[-1 - i] + d))
         else:
             # Definir dos vectores
             v1 = E - R
@@ -209,7 +207,7 @@ while dist > EPSILON and abs(prev - dist) > EPSILON / 100.0:
             th[-1 - i] = (th[-1 - i] + alpha + np.pi) % (2 * np.pi) - np.pi
 
             # Ajustar el ángulo al rango permitido
-            th[-1 - i] = max(rango_min, min(rango_max, th[-1 - i]))
+            th[-1 - i] = max(limite_inf, min(limite_sup, th[-1 - i]))
 
         O.append(cin_dir(th, a))
     dist = np.linalg.norm(np.subtract(objetivo, O[-1][-1]))
