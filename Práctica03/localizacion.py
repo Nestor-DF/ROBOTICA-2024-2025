@@ -60,18 +60,39 @@ def mostrar(objetivos, ideal, trayectoria):
 def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
     # Buscar la localización m�s probable del robot, a partir de su sistema
     # sensorial, dentro de una región cuadrada de centro "centro" y lado "2*radio".
-    imagen = [] # Matriz de probabilidad de dos dimensiones, por cada posición del radio almacenamos el error
+    # imagen = [] # Matriz de probabilidad de dos dimensiones, por cada posición del radio almacenamos el error
     # for (i=-radio, incremento, +radio)
         # for (j=-radio, incremento, +radio)
             # ideal.setPos(centro.x+i, centro.y+j, ideal.orientation)
             # guardar en imagen el cálculo del error (measurement_prob(ideal, real))
             # if (measurement_prob(ideal, real) es mejor que la anterior)
                 # almacenamos la posición
-
     # tenemos la mejor posición 
     # ideal.setPos(mejorPos.x, mejorPos.y, ideal.orientation)
 
-    # Para mostrar el mapa del error:
+    # Buscar la localización más probable del robot a partir de su sistema sensorial.
+    imagen = []  # Matriz de probabilidad de dos dimensiones
+    mejor_prob = float("inf")  # Inicializa el mejor error como infinito
+    mejor_pos = ideal.pose()  # Inicializa con la posición actual del robot ideal
+    incremento = 0.1  # Incremento en la búsqueda en el radio
+
+    for i in np.arange(-radio, radio + incremento, incremento):
+        fila = []
+        for j in np.arange(-radio, radio + incremento, incremento):
+            # Establece temporalmente una nueva posición para el robot ideal
+            ideal.set(centro[0] + i, centro[1] + j, ideal.orientation)
+            # Calcula la probabilidad de la posición actual
+            prob = ideal.measurement_prob(real.sense(balizas), balizas)
+            fila.append(prob)
+            if prob < mejor_prob:  # Menor error implica mejor posición
+                mejor_prob = prob
+                mejor_pos = [centro[0] + i, centro[1] + j, ideal.orientation]
+        imagen.append(fila)
+
+    # Actualiza la posición del robot ideal con la mejor encontrada
+    ideal.set(*mejor_pos)
+
+    # Mostrar el mapa del error si se solicita
     if mostrar:
         # plt.ion() # modo interactivo
         plt.xlim(centro[0] - radio, centro[0] + radio)
@@ -141,7 +162,9 @@ tiempo = 0.0
 espacio = 0.0
 # random.seed(int(datetime.now().timestamp()))
 
-# Localizar inicialmente al robot (llamar a la función localizacion)
+# Localizar inicialmente al robot
+radio = 1.0
+localizacion(objetivos, real, ideal, [real.x, real.y], radio)
 
 for punto in objetivos:
     while distancia(tray_ideal[-1], punto) > EPSILON and len(tray_ideal) <= 1000:
@@ -178,6 +201,14 @@ for punto in objetivos:
         # es decir, cogemos las medidas de nuestro robot real y las comparamos con todas las posibilidades
         # moviendo nuestro robot ideal virtualmente a ver cúal es el mejor punto (nos lo da measurement_prob)
         # y corregiremos la posición
+
+        # Compara las lecturas del robot real e ideal
+        error_mediciones = sum(
+            abs(r - i) for r, i in zip(real.sense(objetivos), ideal.sense(objetivos))
+        )
+        if error_mediciones > 0.5:  # Umbral de error
+            # Llama a la función de localización para corregir la posición
+            localizacion(objetivos, real, ideal, [real.x, real.y], radio)
 
         espacio += v
         tiempo += 1
