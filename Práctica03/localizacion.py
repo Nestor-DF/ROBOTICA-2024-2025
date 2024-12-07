@@ -94,7 +94,7 @@ def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
 
     # Mostrar el mapa del error si se solicita
     if mostrar:
-        # plt.ion() # modo interactivo
+        plt.ion() # modo interactivo
         plt.xlim(centro[0] - radio, centro[0] + radio)
         plt.ylim(centro[1] - radio, centro[1] + radio)
         imagen.reverse()
@@ -163,8 +163,8 @@ espacio = 0.0
 # random.seed(int(datetime.now().timestamp()))
 
 # Localizar inicialmente al robot
-radio = 1.0
-localizacion(objetivos, real, ideal, [real.x, real.y], radio)
+RADIO = 1.0
+localizacion(objetivos, real, ideal, [real.x, real.y], RADIO)
 
 for punto in objetivos:
     while distancia(tray_ideal[-1], punto) > EPSILON and len(tray_ideal) <= 1000:
@@ -208,7 +208,7 @@ for punto in objetivos:
         )
         if error_mediciones > 0.5:  # Umbral de error
             # Llama a la función de localización para corregir la posición
-            localizacion(objetivos, real, ideal, [real.x, real.y], radio)
+            localizacion(objetivos, real, ideal, [real.x, real.y], RADIO)
 
         espacio += v
         tiempo += 1
