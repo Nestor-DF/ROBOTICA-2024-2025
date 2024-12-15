@@ -67,19 +67,19 @@ def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
     imagen = []  # Matriz de probabilidad de dos dimensiones
     mejor_prob = float("inf")  # Inicializa el mejor error como infinito
     mejor_pos = ideal.pose()  # Inicializa con la posición actual del robot ideal
-    incremento = 0.1  # Incremento en la búsqueda en el radio
+    incremento = 0.05  # Incremento en la búsqueda en el radio
 
     for i in np.arange(-radio, radio + incremento, incremento):
         fila = []
         for j in np.arange(-radio, radio + incremento, incremento):
             # Establece temporalmente una nueva posición para el robot ideal
-            ideal.set(centro[0] + i, centro[1] + j, ideal.orientation)
+            ideal.set(centro[0] + j, centro[1] + i, ideal.orientation)
             # Calcula la probabilidad de la posición actual
             prob = ideal.measurement_prob(real.sense(balizas), balizas)
             fila.append(prob)
             if prob < mejor_prob:  # Menor error implica mejor posición
                 mejor_prob = prob
-                mejor_pos = [centro[0] + i, centro[1] + j, ideal.orientation]
+                mejor_pos = [centro[0] + j, centro[1] + i, real.orientation]
         imagen.append(fila)
 
     # Actualiza la posición del robot ideal con la mejor encontrada
@@ -171,7 +171,7 @@ espacio = 0.0
 
 # Localizar inicialmente al robot -> Lanzar búsqueda en TODA la región
 radio_dinamico = calcular_radio_dinamico(objetivos, [ideal.x, ideal.y])
-localizacion(objetivos, real, ideal, [ideal.x, ideal.y], radio_dinamico, 1)
+localizacion(objetivos, real, ideal, [2, 2], radio_dinamico, 1)
 
 for punto in objetivos:
     # len(tray_ideal) <= 1000: -> por si te pierdes mucho y no encuentras las balizas

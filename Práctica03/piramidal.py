@@ -111,7 +111,12 @@ def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
 
 
 def localizacion_piramidal(
-    balizas, real, ideal, centro, radio, resoluciones, mostrar=0
+    balizas,
+    real,
+    ideal,
+    centro,
+    radio,
+    resoluciones,
 ):
     # Buscar la localización más probable del robot, a partir de su sistema
     # sensorial, dentro de una región cuadrada de centro "centro" y lado "2*radio".
@@ -124,11 +129,11 @@ def localizacion_piramidal(
         for i in np.arange(-radio, radio + incremento, incremento):
             for j in np.arange(-radio, radio + incremento, incremento):
                 # Establece temporalmente una nueva posición para el robot ideal
-                ideal.set(centro[0] + i, centro[1] + j, ideal.orientation)
+                ideal.set(centro[0] + j, centro[1] + i, ideal.orientation)
                 prob = ideal.measurement_prob(real.sense(balizas), balizas)
                 if prob < mejor_prob:  # Actualiza si la probabilidad es mejor
                     mejor_prob = prob
-                    mejor_pos = [centro[0] + i, centro[1] + j, ideal.orientation]
+                    mejor_pos = [centro[0] + j, centro[1] + i, real.orientation]
 
         # Ajustar la región de búsqueda para la siguiente resolución
         radio = radio / 2
@@ -136,30 +141,6 @@ def localizacion_piramidal(
 
     # Actualiza la posición del robot ideal con la mejor encontrada
     ideal.set(*mejor_pos)
-
-    # Mostrar el mapa del error si se solicita
-    if mostrar:
-        plt.ion()  # modo interactivo
-        plt.xlim(centro[0] - radio, centro[0] + radio)
-        plt.ylim(centro[1] - radio, centro[1] + radio)
-        imagen.reverse()
-        plt.imshow(
-            imagen,
-            extent=[
-                centro[0] - radio,
-                centro[0] + radio,
-                centro[1] - radio,
-                centro[1] + radio,
-            ],
-        )
-        balT = np.array(balizas).T.tolist()
-        plt.plot(balT[0], balT[1], "or", ms=10)
-        plt.plot(ideal.x, ideal.y, "D", c="#ff00ff", ms=10, mew=2, label="Robot ideal")
-        plt.plot(real.x, real.y, "D", c="#00ff00", ms=10, mew=2, label="Robot real")
-        plt.legend(loc="upper right")  # Añadir leyenda en la esquina superior derecha
-        plt.show()
-        input()
-        plt.clf()
 
 
 # Calcular el radio dinámico basado en la región que contiene los puntos en 'objetivos'
