@@ -168,6 +168,17 @@ def localizacion_piramidal(
             mejor_orientacion = error
             mejor_ang = ang
 
+    mejor_orientacion = sys.float_info.max
+    mejorOrientacion = ideal.orientation
+    for i in np.arange(-pi, pi, 0.01):
+        ideal.set(mejorpunto[0], mejorpunto[1], i)
+        error = real.measurement_prob(ideal.sense(balizas), balizas)
+        if error < mejor_orientacion:
+            mejor_orientacion = error
+            mejorOrientacion = i
+    if mejorOrientacion:
+        ideal.set(mejorpunto[0], mejorpunto[1], mejorOrientacion)
+
     # Establecer la mejor pose
     ideal.set(mejor_punto[0], mejor_punto[1], mejor_ang)
 
@@ -263,7 +274,7 @@ for punto in objetivos:
 
         if weight > THRESHOLD:
             # localizacion(objetivos, real, ideal, ideal.pose(), 2 * weight, 0)
-            localizacion_piramidal(objetivos, real, ideal, ideal.pose(), 2 * weight)
+            localizacion_piramidal(objetivos, real, ideal, ideal.pose(), 2 * weight, mostrar=1)
 
         espacio += v
         tiempo += 1

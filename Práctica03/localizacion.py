@@ -4,7 +4,6 @@
 import sys
 from math import *
 from robot import robot
-import random
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
@@ -25,13 +24,11 @@ def angulo_rel(pose, p):
     return w
 
 
-def mostrar(objetivos, ideal, trayectoria):
-    # Mostrar objetivos y trayectoria:
+def mostrar(objetivos, tray_ideal, tray_real):
     plt.ion()  # modo interactivo
-    # Fijar los bordes del gr�fico
     objT = np.array(objetivos).T.tolist()
-    trayT = np.array(trayectoria).T.tolist()
-    ideT = np.array(ideal).T.tolist()
+    trayT = np.array(tray_real).T.tolist()
+    ideT = np.array(tray_ideal).T.tolist()
     bordes = [
         min(trayT[0] + objT[0] + ideT[0]),
         max(trayT[0] + objT[0] + ideT[0]),
@@ -42,16 +39,20 @@ def mostrar(objetivos, ideal, trayectoria):
     radio = max(bordes[1] - bordes[0], bordes[3] - bordes[2]) * 0.75
     plt.xlim(centro[0] - radio, centro[0] + radio)
     plt.ylim(centro[1] - radio, centro[1] + radio)
-    # Representar objetivos y trayectoria
-    idealT = np.array(ideal).T.tolist()
-    plt.plot(idealT[0], idealT[1], "-g")
-    plt.plot(trayectoria[0][0], trayectoria[0][1], "or")
+    tray_idealT = np.array(tray_ideal).T.tolist()
+    plt.plot(tray_idealT[0], tray_idealT[1], "-g", label="Trayectoria Ideal")
+    plt.plot(tray_real[0][0], tray_real[0][1], "or")
     r = radio * 0.1
-    for p in trayectoria:
-        plt.plot([p[0], p[0] + r * cos(p[2])], [p[1], p[1] + r * sin(p[2])], "-r")
-        # plt.plot(p[0],p[1],'or')
+    for p in tray_real:
+        plt.plot(
+            [p[0], p[0] + r * cos(p[2])],
+            [p[1], p[1] + r * sin(p[2])],
+            "-r",
+            label="Trayectoria Real" if p == tray_real[0] else "",
+        )
     objT = np.array(objetivos).T.tolist()
-    plt.plot(objT[0], objT[1], "-.o")
+    plt.plot(objT[0], objT[1], "-.o", label="Objetivos")
+    plt.legend(loc="upper right")  # Añadir leyenda en la esquina superior derecha
     plt.show()
     input()
     plt.clf()
@@ -63,29 +64,32 @@ def mostrar(objetivos, ideal, trayectoria):
 def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
     # Buscar la localización más probable del robot, a partir de su sistema
     # sensorial, dentro de una región cuadrada de centro "centro" y lado "2*radio".
-
-    imagen = []  # Matriz de probabilidad de dos dimensiones
-    mejor_prob = float("inf")  # Inicializa el mejor error como infinito
-    mejor_pos = ideal.pose()  # Inicializa con la posición actual del robot ideal
-    incremento = 0.05  # Incremento en la búsqueda en el radio
+    imagen = []
+    mejor_error = float("inf")
+    mejor_punto = [ideal.x, ideal.y]
+    incremento = 0.05
 
     for i in np.arange(-radio, radio + incremento, incremento):
         fila = []
         for j in np.arange(-radio, radio + incremento, incremento):
-            # Establece temporalmente una nueva posición para el robot ideal
             ideal.set(centro[0] + j, centro[1] + i, ideal.orientation)
-            # Calcula la probabilidad de la posición actual
-            prob = ideal.measurement_prob(real.sense(balizas), balizas)
-            fila.append(prob)
-            if prob < mejor_prob:  # Menor error implica mejor posición
-                mejor_prob = prob
-                mejor_pos = [centro[0] + j, centro[1] + i, real.orientation]
+            error = ideal.measurement_prob(real.sense(balizas), balizas)
+            fila.append(error)
+            if error < mejor_error:
+                mejor_error = error
+                mejor_punto = [centro[0] + j, centro[1] + i]
         imagen.append(fila)
 
-    # Actualiza la posición del robot ideal con la mejor encontrada
-    ideal.set(*mejor_pos)
+    mejor_orientacion = ideal.orientation
+    for angulo in np.linspace(-pi, pi, 36):  # Dividir el rango en 36 pasos
+        ideal.set(mejor_punto[0], mejor_punto[1], angulo)
+        error = ideal.measurement_prob(real.sense(balizas), balizas)
+        if error < mejor_error:
+            mejor_error = error
+            mejor_orientacion = angulo
 
-    # Mostrar el mapa del error si se solicita
+    ideal.set(mejor_punto[0], mejor_punto[1], mejor_orientacion)
+
     if mostrar:
         plt.ion()  # modo interactivo
         plt.xlim(centro[0] - radio, centro[0] + radio)
@@ -104,10 +108,39 @@ def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
         plt.plot(balT[0], balT[1], "or", ms=10)
         plt.plot(ideal.x, ideal.y, "D", c="#ff00ff", ms=10, mew=2, label="Robot ideal")
         plt.plot(real.x, real.y, "D", c="#00ff00", ms=10, mew=2, label="Robot real")
-        plt.legend(loc="upper right")  # Añadir leyenda en la esquina superior derecha
+        plt.legend(loc="upper right")
         plt.show()
         input()
         plt.clf()
+
+
+def localizacion_piramidal(balizas, real, ideal, centro, radio):
+    mejor_error = float("inf")
+    mejor_punto = [ideal.x, ideal.y]
+
+    niveles = 3  # Número de niveles en la búsqueda piramidal
+    for nivel in range(niveles):
+        incremento = radio / (2**nivel)  # Reducir el paso en cada nivel
+        rango = np.arange(-radio, radio + incremento, incremento)
+        for i in rango:
+            for j in rango:
+                ideal.set(centro[0] + j, centro[1] + i, ideal.orientation)
+                error = ideal.measurement_prob(real.sense(balizas), balizas)
+                if error < mejor_error:  # Menor error implica mejor posición
+                    mejor_error = error
+                    mejor_punto = [centro[0] + j, centro[1] + i]
+        # Ajustar el centro para el siguiente nivel al mejor encontrado
+        centro = [mejor_punto[0], mejor_punto[1]]
+
+    mejor_orientacion = ideal.orientation
+    for angulo in np.linspace(-pi, pi, 36):  # Dividir el rango en 36 pasos
+        ideal.set(mejor_punto[0], mejor_punto[1], angulo)
+        error = ideal.measurement_prob(real.sense(balizas), balizas)
+        if error < mejor_error:
+            mejor_error = error
+            mejor_orientacion = angulo
+
+    ideal.set(mejor_punto[0], mejor_punto[1], mejor_orientacion)
 
 
 # Calcular el radio dinámico basado en la región que contiene los puntos en 'objetivos'
@@ -167,7 +200,6 @@ tray_real = [real.pose()]  # Trayectoria seguida
 
 tiempo = 0.0
 espacio = 0.0
-# random.seed(int(datetime.now().timestamp()))
 
 # Localizar inicialmente al robot -> Lanzar búsqueda en TODA la región
 radio_dinamico = calcular_radio_dinamico(objetivos, [ideal.x, ideal.y])
@@ -207,9 +239,11 @@ for punto in objetivos:
         error = ideal.measurement_prob(real.sense(objetivos), objetivos)
         if error > THRESHOLD:
             # Llama a la función de localización para corregir la posición
-            # Región/Entorno centrada en el robot ideal con radio igual a 2*weight (lo que devuelve measurement_prob)
+            # Región/Entorno centrada en el robot ideal con radio igual a 2*error (lo que devuelve measurement_prob)
             print("Necesario localizar: ", error)
-            localizacion(objetivos, real, ideal, [ideal.x, ideal.y], 2 * error)
+            localizacion_piramidal(
+                objetivos, real, ideal, [ideal.x, ideal.y], 2 * error
+            )
         else:
             print("NO es necesario localizar: ", error, "<", THRESHOLD)
 
