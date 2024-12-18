@@ -6,7 +6,6 @@ from math import *
 from robot import robot
 import numpy as np
 import matplotlib.pyplot as plt
-from datetime import datetime
 
 
 def distancia(a, b):
@@ -52,22 +51,19 @@ def mostrar(objetivos, tray_ideal, tray_real):
         )
     objT = np.array(objetivos).T.tolist()
     plt.plot(objT[0], objT[1], "-.o", label="Objetivos")
-    plt.legend(loc="upper right")  # Añadir leyenda en la esquina superior derecha
+    plt.legend(loc="upper right")
     plt.show()
     input()
     plt.clf()
 
 
-# Obligatorio: corregir posición
-# Opcional: corregir también la orientación (por ejemplo, barrer todos los ángulos una vez corregida la posición)
-# Opcional 2: no recorrer tantas casillas en la matriz (búsqueda piramedal?)
 def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
     # Buscar la localización más probable del robot, a partir de su sistema
     # sensorial, dentro de una región cuadrada de centro "centro" y lado "2*radio".
     imagen = []
     mejor_error = float("inf")
     mejor_punto = [ideal.x, ideal.y]
-    incremento = 0.05
+    incremento = radio * 0.005
 
     for i in np.arange(-radio, radio + incremento, incremento):
         fila = []
@@ -81,7 +77,7 @@ def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
         imagen.append(fila)
 
     mejor_orientacion = ideal.orientation
-    for angulo in np.linspace(-pi, pi, 36):  # Dividir el rango en 36 pasos
+    for angulo in np.linspace(-pi, pi, 72):  # Dividir el rango en 72 pasos (5º)
         ideal.set(mejor_punto[0], mejor_punto[1], angulo)
         error = ideal.measurement_prob(real.sense(balizas), balizas)
         if error < mejor_error:
@@ -126,14 +122,14 @@ def localizacion_piramidal(balizas, real, ideal, centro, radio):
             for j in rango:
                 ideal.set(centro[0] + j, centro[1] + i, ideal.orientation)
                 error = ideal.measurement_prob(real.sense(balizas), balizas)
-                if error < mejor_error:  # Menor error implica mejor posición
+                if error < mejor_error:
                     mejor_error = error
                     mejor_punto = [centro[0] + j, centro[1] + i]
         # Ajustar el centro para el siguiente nivel al mejor encontrado
         centro = [mejor_punto[0], mejor_punto[1]]
 
     mejor_orientacion = ideal.orientation
-    for angulo in np.linspace(-pi, pi, 36):  # Dividir el rango en 36 pasos
+    for angulo in np.linspace(-pi, pi, 72):  # Dividir el rango en 72 pasos (5º)
         ideal.set(mejor_punto[0], mejor_punto[1], angulo)
         error = ideal.measurement_prob(real.sense(balizas), balizas)
         if error < mejor_error:
@@ -143,13 +139,18 @@ def localizacion_piramidal(balizas, real, ideal, centro, radio):
     ideal.set(mejor_punto[0], mejor_punto[1], mejor_orientacion)
 
 
-# Calcular el radio dinámico basado en la región que contiene los puntos en 'objetivos'
-# y el punto central [ideal.x, ideal.y]
-def calcular_radio_dinamico(objetivos, centro):
-    # Encontrar la distancia máxima desde 'centro' a los puntos en 'objetivos'
+def calcular_radio(objetivos, centro):
     distancias = [distancia(centro, obj) for obj in objetivos]
-    radio = max(distancias) + 1  # Añadimos un margen de seguridad
+    radio = max(distancias) + 1  # margen de seguridad
     return radio
+
+
+def calcular_centro(puntos):
+    if not puntos:
+        raise ValueError("La lista de puntos no puede estar vacía")
+    x_centro = sum(p[0] for p in puntos) / len(puntos)
+    y_centro = sum(p[1] for p in puntos) / len(puntos)
+    return [x_centro, y_centro]
 
 
 # *******************************************************************************************
@@ -182,7 +183,7 @@ LONGITUD = 0.2
 EPSILON = 0.1  # Umbral de distancia
 # Si es grande localizas menos veces pero la región es más grande (porque hay más error) y viceversa
 THRESHOLD = (
-    0.3  # Umbral de desviación entre robot real vs ideal (0.5 es relativamente grande)
+    0.2  # Umbral de desviación entre robot real vs ideal (0.5 es relativamente grande)
 )
 V = V_LINEAL / FPS  # Metros por fotograma
 W = V_ANGULAR * pi / (180 * FPS)  # Radianes por fotograma
@@ -200,10 +201,16 @@ tray_real = [real.pose()]  # Trayectoria seguida
 
 tiempo = 0.0
 espacio = 0.0
+localiza = 0
+no_localiza = 0
+error_grande = 0
 
-# Localizar inicialmente al robot -> Lanzar búsqueda en TODA la región
-radio_dinamico = calcular_radio_dinamico(objetivos, [ideal.x, ideal.y])
-localizacion(objetivos, real, ideal, [2, 2], radio_dinamico, 1)
+objetivos_ampliados = objetivos + [[ideal.x, ideal.y]]
+centro = calcular_centro(objetivos_ampliados)
+radio = calcular_radio(objetivos_ampliados, centro)
+print("Centro: ", centro)
+print("Radio: ", radio)
+localizacion(objetivos, real, ideal, centro, radio, 1)
 
 for punto in objetivos:
     # len(tray_ideal) <= 1000: -> por si te pierdes mucho y no encuentras las balizas
@@ -238,18 +245,23 @@ for punto in objetivos:
 
         error = ideal.measurement_prob(real.sense(objetivos), objetivos)
         if error > THRESHOLD:
+            if error > 2 * THRESHOLD:
+                error_grande += 1
             # Llama a la función de localización para corregir la posición
             # Región/Entorno centrada en el robot ideal con radio igual a 2*error (lo que devuelve measurement_prob)
-            print("Necesario localizar: ", error)
+            print("Necesario localizar: ", error, ">", THRESHOLD)
             localizacion_piramidal(
                 objetivos, real, ideal, [ideal.x, ideal.y], 2 * error
             )
+            localiza += 1
         else:
             print("NO es necesario localizar: ", error, "<", THRESHOLD)
+            no_localiza += 1
 
         espacio += v
         tiempo += 1
 
+print("\n")
 if len(tray_ideal) > 1000:
     print(
         "<!> Trayectoria muy larga - puede que no se haya alcanzado la posicion final."
@@ -260,4 +272,7 @@ print(
     + str(round(distancia(tray_real[-1], objetivos[-1]), 3))
     + "m"
 )
+print("Localizaciones realizadas: ", localiza)
+print("Localizaciones no realizadas: ", no_localiza)
+print("Número de errores grandes: ", error_grande)
 mostrar(objetivos, tray_ideal, tray_real)
