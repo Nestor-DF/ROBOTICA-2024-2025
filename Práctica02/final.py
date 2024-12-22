@@ -6,6 +6,8 @@
 # Práctica: Resolución de la cinemática inversa mediante CCD
 #           (Cyclic Coordinate Descent).
 
+# python3 Práctica02/final.py ./Práctica02/data/2.json 5 5 0.01
+
 import sys
 from math import cos, sin, atan2
 import numpy as np
@@ -181,7 +183,6 @@ while dist > EPSILON and abs(prev - dist) > EPSILON / 100.0:
         R = np.array(O[-1][-1 - i - 1])
         limite_inf, limite_sup = limites[-1 - i]
         if prismatica[-1 - i] == 1:
-            w = 0
             w = sum(th[: i + 1])
             d = np.dot(np.array([cos(w), sin(w)]), objetivo - E)
             a[-1 - i] = max(limite_inf, min(limite_sup, a[-1 - i] + d))
@@ -212,10 +213,10 @@ while dist > EPSILON and abs(prev - dist) > EPSILON / 100.0:
 
         O.append(cin_dir(th, a))
     dist = np.linalg.norm(np.subtract(objetivo, O[-1][-1]))
-    # MEJORA: Si no hay convergencia tras 5 iteraciones y la distancia al objetivo es mayor a 0.5 no habrá convergencia
-    if iteracion >= 5 and dist > 0.5:
-        print("\nSe estima que no habrá convergencia")
-        break
+    # # MEJORA: Si no hay convergencia tras 5 iteraciones y la distancia al objetivo es mayor a 0.5 no habrá convergencia
+    # if iteracion >= 5 and dist > 0.5:
+    #     print("\nSe estima que no habrá convergencia")
+    #     break
     print("\n- Iteracion " + str(iteracion) + ":")
     muestra_origenes(O[-1])
     print("Distancia al objetivo = " + str(round(dist, 5)))
