@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+
 def plot_stewart_gough(base_points, platform_points, ax):
     ax.clear()
 
@@ -31,10 +32,10 @@ def plot_stewart_gough(base_points, platform_points, ax):
     # Conectar la base con la plataforma y mostrar longitudes
     for i, (bp, pp) in enumerate(zip(base_points, platform_points)):
         ax.plot([bp[0], pp[0]], [bp[1], pp[1]], [bp[2], pp[2]], "g--")
-        
+
         # Calcular longitud de la pata
         length = np.linalg.norm(np.array(bp) - np.array(pp))
-        
+
         # Etiquetar la longitud en el gráfico
         midpoint = [(bp[0] + pp[0]) / 2, (bp[1] + pp[1]) / 2, (bp[2] + pp[2]) / 2]
         ax.text(midpoint[0], midpoint[1], midpoint[2], f"{length:.2f}", color="black")
@@ -51,48 +52,45 @@ def plot_stewart_gough(base_points, platform_points, ax):
     ax.set_ylim([-6, 6])
     ax.set_zlim([-6, 6])
 
+
 # Generar puntos de base y plataforma
 def generate_points(radius, height, num_points):
     angles = np.linspace(0, 2 * np.pi, num_points, endpoint=False)
     points = [(radius * np.cos(a), radius * np.sin(a), height) for a in angles]
     return points
 
+
 # Aplicar transformación a los puntos de la plataforma
-def transform_platform_points(platform_points, translation, rotation):
-    rotation_matrix = np.array(
+def transform_platform_points(platform_points, translation_z, rotation):
+    rotation_roll = np.array(
         [
-            [
-                np.cos(rotation[2]) * np.cos(rotation[1]),
-                np.cos(rotation[2]) * np.sin(rotation[1]) * np.sin(rotation[0])
-                - np.sin(rotation[2]) * np.cos(rotation[0]),
-                np.cos(rotation[2]) * np.sin(rotation[1]) * np.cos(rotation[0])
-                + np.sin(rotation[2]) * np.sin(rotation[0]),
-            ],
-            [
-                np.sin(rotation[2]) * np.cos(rotation[1]),
-                np.sin(rotation[2]) * np.sin(rotation[1]) * np.sin(rotation[0])
-                + np.cos(rotation[2]) * np.cos(rotation[0]),
-                np.sin(rotation[2]) * np.sin(rotation[1]) * np.cos(rotation[0])
-                - np.cos(rotation[2]) * np.sin(rotation[0]),
-            ],
-            [
-                -np.sin(rotation[1]),
-                np.cos(rotation[1]) * np.sin(rotation[0]),
-                np.cos(rotation[1]) * np.cos(rotation[0]),
-            ],
+            [1, 0, 0],
+            [0, np.cos(rotation[0]), -np.sin(rotation[0])],
+            [0, np.sin(rotation[0]), np.cos(rotation[0])],
         ]
     )
+
+    rotation_pitch = np.array(
+        [
+            [np.cos(rotation[1]), 0, np.sin(rotation[1])],
+            [0, 1, 0],
+            [-np.sin(rotation[1]), 0, np.cos(rotation[1])],
+        ]
+    )
+
+    rotation_matrix = np.dot(rotation_pitch, rotation_roll)
 
     transformed_points = []
     for point in platform_points:
         rotated_point = np.dot(rotation_matrix, point)
-        translated_point = rotated_point + translation
+        translated_point = rotated_point + np.array([0, 0, translation_z])
         transformed_points.append(translated_point)
 
     return transformed_points
 
+
 # Parámetros
-num_legs = 6
+num_legs = 3
 base_radius = 5
 platform_radius = 3
 base_height = 0
@@ -102,15 +100,13 @@ platform_height = 3
 base_points = generate_points(base_radius, base_height, num_legs)
 platform_points = generate_points(platform_radius, platform_height, num_legs)
 
-# Control manual de los 6 grados de libertad
+
+# Control manual de los grados de libertad restantes
 class ControlPanel:
     def __init__(self, root, update_callback):
-        self.translation_x = tk.DoubleVar(value=0.0)
-        self.translation_y = tk.DoubleVar(value=0.0)
         self.translation_z = tk.DoubleVar(value=0.0)
         self.rotation_roll = tk.DoubleVar(value=0.0)
         self.rotation_pitch = tk.DoubleVar(value=0.0)
-        self.rotation_yaw = tk.DoubleVar(value=0.0)
         self.update_callback = update_callback
 
         self.create_controls(root)
@@ -118,28 +114,6 @@ class ControlPanel:
     def create_controls(self, root):
         frame = ttk.Frame(root)
         frame.pack(side=tk.LEFT, fill=tk.Y)
-
-        ttk.Label(frame, text="Translation X").pack()
-        ttk.Scale(
-            frame,
-            variable=self.translation_x,
-            from_=-5,
-            to=5,
-            orient="horizontal",
-            length=300,
-            command=self.update_callback,
-        ).pack()
-
-        ttk.Label(frame, text="Translation Y").pack()
-        ttk.Scale(
-            frame,
-            variable=self.translation_y,
-            from_=-5,
-            to=5,
-            orient="horizontal",
-            length=300,
-            command=self.update_callback,
-        ).pack()
 
         ttk.Label(frame, text="Translation Z").pack()
         ttk.Scale(
@@ -174,27 +148,14 @@ class ControlPanel:
             command=self.update_callback,
         ).pack()
 
-        ttk.Label(frame, text="Rotation Yaw").pack()
-        ttk.Scale(
-            frame,
-            variable=self.rotation_yaw,
-            from_=-180,
-            to=180,
-            orient="horizontal",
-            length=300,
-            command=self.update_callback,
-        ).pack()
-
         ttk.Button(frame, text="Reset", command=self.reset_controls).pack(pady=10)
 
     def reset_controls(self):
-        self.translation_x.set(0.0)
-        self.translation_y.set(0.0)
         self.translation_z.set(0.0)
         self.rotation_roll.set(0.0)
         self.rotation_pitch.set(0.0)
-        self.rotation_yaw.set(0.0)
         self.update_callback()
+
 
 # Crear ventana principal
 root = tk.Tk()
@@ -210,28 +171,23 @@ canvas_widget.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 # Función de actualización
 platform_points_transformed = platform_points
 
+
 def update_simulation(event=None):
     global platform_points_transformed
-    translation = np.array(
-        [
-            control_panel.translation_x.get(),
-            control_panel.translation_y.get(),
-            control_panel.translation_z.get(),
-        ]
-    )
+    translation_z = control_panel.translation_z.get()
     rotation = np.radians(
         [
             control_panel.rotation_roll.get(),
             control_panel.rotation_pitch.get(),
-            control_panel.rotation_yaw.get(),
         ]
     )
 
     platform_points_transformed = transform_platform_points(
-        np.array(platform_points), translation, rotation
+        np.array(platform_points), translation_z, rotation
     )
     plot_stewart_gough(base_points, platform_points_transformed, ax)
     canvas.draw()
+
 
 # Crear panel de control
 control_panel = ControlPanel(root, update_simulation)
