@@ -5,7 +5,6 @@ import tkinter as tk
 from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-
 def plot_stewart_gough(base_points, platform_points, ax):
     ax.clear()
 
@@ -29,9 +28,16 @@ def plot_stewart_gough(base_points, platform_points, ax):
         label="Plataforma",
     )
 
-    # Conectar la base con la plataforma
-    for bp, pp in zip(base_points, platform_points):
+    # Conectar la base con la plataforma y mostrar longitudes
+    for i, (bp, pp) in enumerate(zip(base_points, platform_points)):
         ax.plot([bp[0], pp[0]], [bp[1], pp[1]], [bp[2], pp[2]], "g--")
+        
+        # Calcular longitud de la pata
+        length = np.linalg.norm(np.array(bp) - np.array(pp))
+        
+        # Etiquetar la longitud en el gráfico
+        midpoint = [(bp[0] + pp[0]) / 2, (bp[1] + pp[1]) / 2, (bp[2] + pp[2]) / 2]
+        ax.text(midpoint[0], midpoint[1], midpoint[2], f"{length:.2f}", color="black")
 
     # Configuración del gráfico
     ax.set_xlabel("X")
@@ -45,13 +51,11 @@ def plot_stewart_gough(base_points, platform_points, ax):
     ax.set_ylim([-6, 6])
     ax.set_zlim([-6, 6])
 
-
 # Generar puntos de base y plataforma
 def generate_points(radius, height, num_points):
     angles = np.linspace(0, 2 * np.pi, num_points, endpoint=False)
     points = [(radius * np.cos(a), radius * np.sin(a), height) for a in angles]
     return points
-
 
 # Aplicar transformación a los puntos de la plataforma
 def transform_platform_points(platform_points, translation, rotation):
@@ -87,7 +91,6 @@ def transform_platform_points(platform_points, translation, rotation):
 
     return transformed_points
 
-
 # Parámetros
 num_legs = 6
 base_radius = 5
@@ -98,7 +101,6 @@ platform_height = 3
 # Generar puntos de la base y de la plataforma
 base_points = generate_points(base_radius, base_height, num_legs)
 platform_points = generate_points(platform_radius, platform_height, num_legs)
-
 
 # Control manual de los 6 grados de libertad
 class ControlPanel:
@@ -194,7 +196,6 @@ class ControlPanel:
         self.rotation_yaw.set(0.0)
         self.update_callback()
 
-
 # Crear ventana principal
 root = tk.Tk()
 root.title("Control de Plataforma Stewart-Gough")
@@ -208,7 +209,6 @@ canvas_widget.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
 # Función de actualización
 platform_points_transformed = platform_points
-
 
 def update_simulation(event=None):
     global platform_points_transformed
@@ -232,7 +232,6 @@ def update_simulation(event=None):
     )
     plot_stewart_gough(base_points, platform_points_transformed, ax)
     canvas.draw()
-
 
 # Crear panel de control
 control_panel = ControlPanel(root, update_simulation)
